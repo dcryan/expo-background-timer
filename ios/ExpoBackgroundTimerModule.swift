@@ -1,44 +1,128 @@
+import UIKit
 import ExpoModulesCore
 
 public class ExpoBackgroundTimerModule: Module {
-  // Each module class must implement the definition function. The definition consists of components
-  // that describes the module's functionality and behavior.
-  // See https://docs.expo.dev/modules/module-api for more details about available components.
-  public func definition() -> ModuleDefinition {
-    // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
-    // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
-    // The module will be accessible from `requireNativeModule('ExpoBackgroundTimer')` in JavaScript.
-    Name("ExpoBackgroundTimer")
+    private var bgTask: UIBackgroundTaskIdentifier = .invalid
+    private var setTimeoutWorkItems: [Int: DispatchWorkItem] = [:]
 
-    // Sets constant properties on the module. Can take a dictionary or a closure that returns a dictionary.
-    Constants([
-      "PI": Double.pi
-    ])
+    public func definition() -> ModuleDefinition {
+        Name("ExpoBackgroundTimer")
 
-    // Defines event names that the module can send to JavaScript.
-    Events("onChange")
+        Events(
+            "backgroundTimer.taskStarted",
+            "backgroundTimer.taskStopped",
+            "backgroundTimer.started",
+            "backgroundTimer.timeout",
+            "backgroundTimer.timeoutCleared",
+            "backgroundTimer.error"
+        )
 
-    // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
-    Function("hello") {
-      return "Hello world! 👋"
+        Function("startBackgroundTask") {
+            self.startBackgroundTask()
+        }
+
+        Function("stopBackgroundTask") {
+            self.stopBackgroundTask()
+        }
+
+        Function("setTimeout") { (timeoutId: Int, timeout: Double) in
+            self.setTimeout(timeoutId: timeoutId, timeout: timeout)
+        }
+
+        Function("clearTimeout") { (timeoutId: Int) in
+            self.clearTimeout(timeoutId: timeoutId)
+        }
     }
 
-    // Defines a JavaScript function that always returns a Promise and whose native code
-    // is by default dispatched on the different thread than the JavaScript runtime runs on.
-    AsyncFunction("setValueAsync") { (value: String) in
-      // Send an event to JavaScript.
-      self.sendEvent("onChange", [
-        "value": value
-      ])
+    private func startBackgroundTask() {
+        guard bgTask == .invalid else {
+            self.sendEvent(
+                "backgroundTimer.error",
+                ["message": "Background task is already running"]
+            )
+            return
+        }
+
+        bgTask = UIApplication.shared.beginBackgroundTask(withName: "RNBackgroundTimer") { [weak self] in
+            self?.stopBackgroundTask()
+        }
+
+        DispatchQueue.main.async { [weak self] in
+            self?.sendEvent(
+                "backgroundTimer.taskStarted",
+                ["status": "running"]
+            )
+        }
     }
 
-    // Enables the module to be used as a native view. Definition components that are accepted as part of the
-    // view definition: Prop, Events.
-    View(ExpoBackgroundTimerView.self) {
-      // Defines a setter for the `name` prop.
-      Prop("name") { (view: ExpoBackgroundTimerView, prop: String) in
-        print(prop)
-      }
+    private func stopBackgroundTask() {
+        guard bgTask != .invalid else {
+            self.sendEvent(
+                "backgroundTimer.error",
+                ["message": "Background task is not running"]
+            )
+            return
+        }
+
+
+        UIApplication.shared.endBackgroundTask(self.bgTask)
+        bgTask = .invalid
+
+        DispatchQueue.main.async { [weak self] in
+            self?.sendEvent(
+                "backgroundTimer.taskStopped",
+                ["status": "stopped"]
+            )
+        }
     }
-  }
+
+    private func setTimeout(timeoutId: Int, timeout: Double) {
+        guard bgTask != .invalid else {
+            self.sendEvent(
+                "backgroundTimer.error",
+                ["message": "Background task is not running"]
+            )
+            return
+        }
+
+        self.sendEvent("backgroundTimer.started", ["id": timeoutId])
+
+        setTimeoutWorkItems[timeoutId] = DispatchWorkItem { [weak self] in
+            setTimeoutWorkItems.removeValue(forKey: timeoutId)
+
+            self?.sendEvent("backgroundTimer.timeout", ["id": timeoutId])
+        }
+
+        let workItem = setTimeoutWorkItems[timeoutId]!
+
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + timeout / 1000,
+            execute: workItem
+        )
+    }
+
+    private func clearTimeout(timeoutId: Int) {
+        guard bgTask != .invalid else {
+            self.sendEvent(
+                "backgroundTimer.error",
+                ["message": "Background task is not running"]
+            )
+            return
+        }
+
+        guard setTimeoutWorkItems[timeoutId] != nil else {
+            self.sendEvent(
+                "backgroundTimer.error",
+                ["message": "Timeout \(timeoutId) is not found."]
+            )
+            return
+        }
+
+        setTimeoutWorkItems[timeoutId]?.cancel()
+
+        setTimeoutWorkItems.removeValue(forKey: timeoutId)
+
+        self.sendEvent("backgroundTimer.timeoutCleared", ["id": timeoutId])
+    }
 }
+

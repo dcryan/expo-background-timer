@@ -1,47 +1,94 @@
 package expo.modules.backgroundtimer
 
+import android.os.Handler
+import android.os.Looper
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import expo.modules.kotlin.events.EventName
+import java.util.concurrent.ConcurrentHashMap
+import android.os.PowerManager
+import android.content.Context
 
 class ExpoBackgroundTimerModule : Module() {
-  // Each module class must implement the definition function. The definition consists of components
-  // that describes the module's functionality and behavior.
-  // See https://docs.expo.dev/modules/module-api for more details about available components.
+
+  private val handler = Handler(Looper.getMainLooper())
+  private val setTimeoutWorkItems = ConcurrentHashMap<Int, Runnable>()
+  private lateinit var wakeLock: PowerManager.WakeLock
+
   override fun definition() = ModuleDefinition {
-    // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
-    // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
-    // The module will be accessible from `requireNativeModule('ExpoBackgroundTimer')` in JavaScript.
     Name("ExpoBackgroundTimer")
 
-    // Sets constant properties on the module. Can take a dictionary or a closure that returns a dictionary.
-    Constants(
-      "PI" to Math.PI
+    Events(
+      "backgroundTimer.taskStarted",
+      "backgroundTimer.taskStopped",
+      "backgroundTimer.started",
+      "backgroundTimer.timeout",
+      "backgroundTimer.timeoutCleared",
+      "backgroundTimer.error"
     )
 
-    // Defines event names that the module can send to JavaScript.
-    Events("onChange")
-
-    // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
-    Function("hello") {
-      "Hello world! 👋"
+    OnCreate {
+      val powerManager = appContext.reactContext?.getSystemService(Context.POWER_SERVICE) as PowerManager
+      wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyApp::MyWakeLockTag")
     }
 
-    // Defines a JavaScript function that always returns a Promise and whose native code
-    // is by default dispatched on the different thread than the JavaScript runtime runs on.
-    AsyncFunction("setValueAsync") { value: String ->
-      // Send an event to JavaScript.
-      sendEvent("onChange", mapOf(
-        "value" to value
-      ))
+    OnDestroy {
+      if (wakeLock.isHeld) wakeLock.release()
     }
 
-    // Enables the module to be used as a native view. Definition components that are accepted as part of
-    // the view definition: Prop, Events.
-    View(ExpoBackgroundTimerView::class) {
-      // Defines a setter for the `name` prop.
-      Prop("name") { view: ExpoBackgroundTimerView, prop: String ->
-        println(prop)
-      }
+    Function("startBackgroundTask") {
+      startBackgroundTask()
+    }
+
+    Function("stopBackgroundTask") {
+      stopBackgroundTask()
+    }
+
+    Function("setTimeout") { timeoutId: Int, timeout: Double ->
+      setTimeout(timeoutId, timeout)
+    }
+
+    Function("clearTimeout") { timeoutId: Int ->
+      clearTimeout(timeoutId)
     }
   }
+
+  private fun startBackgroundTask() {
+    if (!wakeLock.isHeld) wakeLock.acquire()
+
+    sendEvent("backgroundTimer.taskStarted", mapOf("status" to "running"))
+  }
+
+  private fun stopBackgroundTask() {
+    if (wakeLock.isHeld) wakeLock.release()
+
+    setTimeoutWorkItems.values.forEach { handler.removeCallbacks(it) }
+    setTimeoutWorkItems.clear()
+
+    sendEvent("backgroundTimer.taskStopped", mapOf("status" to "stopped"))
+  }
+
+  private fun setTimeout(timeoutId: Int, timeout: Double) {
+    val runnable = Runnable {
+      setTimeoutWorkItems.remove(timeoutId)
+      sendEvent("backgroundTimer.timeout", mapOf("id" to timeoutId))
+    }
+
+    setTimeoutWorkItems[timeoutId] = runnable
+
+    handler.postDelayed(runnable, timeout.toLong())
+  }
+
+  private fun clearTimeout(timeoutId: Int) {
+    if (!setTimeoutWorkItems.containsKey(timeoutId)) {
+      sendEvent("backgroundTimer.error", mapOf("message" to "Timeout $timeoutId not found."))
+      return
+    }
+
+    setTimeoutWorkItems[timeoutId]?.let { handler.removeCallbacks(it) }
+    setTimeoutWorkItems.remove(timeoutId)
+
+    sendEvent("backgroundTimer.timeoutCleared", mapOf("id" to timeoutId))
+  }
 }
+
