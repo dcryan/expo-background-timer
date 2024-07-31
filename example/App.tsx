@@ -17,7 +17,7 @@ export default function App() {
 
   const onSetTimeout = async () => {
     console.log("App - onSetTimeout");
-    const timerId = await ExpoBackgroundTimer.bgSetTimeout(() => {
+    const timerId = ExpoBackgroundTimer.bgSetTimeout(() => {
       setIds(ids.filter((i) => i !== timerId));
     }, 3000);
 
@@ -26,7 +26,7 @@ export default function App() {
 
   const onSetInterval = async () => {
     console.log("App - onSetInterval");
-    const timerId = await ExpoBackgroundTimer.bgSetInterval(() => {}, 3000);
+    const timerId = ExpoBackgroundTimer.bgSetInterval(() => {}, 3000);
 
     setIds([...ids, timerId]);
   };
