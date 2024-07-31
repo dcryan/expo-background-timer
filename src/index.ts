@@ -13,7 +13,7 @@ import {
 import ExpoBackgroundTimerModule from "./ExpoBackgroundTimerModule";
 
 const emitter = new EventEmitter(
-  ExpoBackgroundTimerModule ?? requireNativeModule("ExpoBackgroundTimer")
+  ExpoBackgroundTimerModule ?? requireNativeModule("ExpoBackgroundTimer"),
 );
 
 const callbacks: {
@@ -38,14 +38,14 @@ function addBackgroundTimerListener() {
       if (callbacks[event.id].interval) {
         ExpoBackgroundTimerModule.setTimeout(
           event.id,
-          callbacks[event.id].timeout
+          callbacks[event.id].timeout,
         );
         return;
       }
 
       // Clear the callback
       delete callbacks[event.id];
-    }
+    },
   );
 }
 
@@ -68,7 +68,7 @@ export function startBackgroundTask() {
         } catch (e) {
           reject(e);
         }
-      }
+      },
     );
 
     ExpoBackgroundTimerModule.startBackgroundTask();
@@ -94,7 +94,7 @@ export function stopBackgroundTask() {
         } catch (e) {
           reject(e);
         }
-      }
+      },
     );
 
     ExpoBackgroundTimerModule.stopBackgroundTask();
@@ -103,10 +103,10 @@ export function stopBackgroundTask() {
 
 let uniqueId = 0;
 
-export async function bgSetTimeout(
+export function bgSetTimeout(
   callback: () => void,
   timeout: number,
-  interval = false
+  interval = false,
 ) {
   uniqueId += 1;
 
@@ -139,20 +139,20 @@ if (__DEV__) {
     "backgroundTimer.error",
     (event: BackgroundTimerError) => {
       console.log("backgroundTimer.error: ", event.message);
-    }
+    },
   );
 
   emitter.addListener(
     "backgroundTimer.started",
     (event: BackgroundTimerTimeoutClearedEvent) => {
       console.log("backgroundTimer.started: ", event.id);
-    }
+    },
   );
 
   emitter.addListener(
     "backgroundTimer.timeoutCleared",
     (event: BackgroundTimerTimeoutClearedEvent) => {
       console.log("backgroundTimer.timeoutCleared: ", event.id);
-    }
+    },
   );
 }
