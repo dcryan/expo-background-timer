@@ -22,7 +22,10 @@
     "expo-background-timer",
     "ExpoBackgroundTimer"
   ],
-  "repository": "https://github.com/dcryan/expo-background-timer",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dcryan/expo-background-timer.git"
+  },
   "bugs": {
     "url": "https://github.com/dcryan/expo-background-timer/issues"
   },
