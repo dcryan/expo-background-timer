@@ -88,7 +88,7 @@ public class ExpoBackgroundTimerModule: Module {
         self.sendEvent("backgroundTimer.started", ["id": timeoutId])
 
         setTimeoutWorkItems[timeoutId] = DispatchWorkItem { [weak self] in
-            setTimeoutWorkItems.removeValue(forKey: timeoutId)
+            self?.setTimeoutWorkItems.removeValue(forKey: timeoutId)
 
             self?.sendEvent("backgroundTimer.timeout", ["id": timeoutId])
         }
