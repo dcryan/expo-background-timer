@@ -3,8 +3,9 @@
 The Expo Background Timer Module allows you to schedule and manage timed tasks
 in your Expo app, even when the app is running in the background. This module
 supports both Android and iOS, providing a simple API to start and stop
-background tasks, as well as to set and clear timeouts and intervals. There is
-no need to eject your Expo app from an Expo Managed Workflow.
+background tasks, as well as to set and clear timeouts and intervals.
+
+**There is no need to eject your Expo app from an Expo Managed Workflow.**
 
 ## Features
 
