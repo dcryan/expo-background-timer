@@ -19,6 +19,7 @@
     "react-native",
     "expo",
     "background-timer",
+    "timer",
     "expo-background-timer",
     "ExpoBackgroundTimer"
   ],
@@ -32,11 +33,10 @@
   "author": "Daniel Ryan <d@nielryan.com> (https://github.com/dcryan)",
   "license": "MIT",
   "homepage": "https://github.com/dcryan/expo-background-timer#readme",
-  "dependencies": {},
   "devDependencies": {
     "@types/react": "^18.0.25",
-    "expo-module-scripts": "^3.5.1",
-    "expo-modules-core": "^1.12.9"
+    "expo-module-scripts": "^3.5.2",
+    "expo-modules-core": "^1.12.24"
   },
   "peerDependencies": {
     "expo": "*",
