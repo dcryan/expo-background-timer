@@ -1,4 +1,5 @@
 import { EventEmitter, requireNativeModule } from "expo-modules-core";
+import { useEffect } from "react";
 
 import {
   BackgroundTaskEvent,
@@ -28,19 +29,24 @@ export function disableBackgroundExecution() {
   return ExpoBackgroundTimerModule.setBackgroundExecutionEnabled(false);
 }
 
+export function useBackgroundExecution() {
+  useEffect(() => {
+    enableBackgroundExecution();
+    return () => {
+      disableBackgroundExecution();
+    };
+  }, []);
+}
+
 let uniqueId = 0;
 
-export function bgSetTimeout(
-  callback: () => void,
-  duration: number,
-  interval = false
-) {
+export function bgSetTimeout(callback: () => void, duration: number) {
   uniqueId += 1;
 
   callbacks[uniqueId] = {
     callback,
-    interval,
     duration,
+    interval: false,
   };
 
   ExpoBackgroundTimerModule.setTimeout(uniqueId, duration);
@@ -49,7 +55,17 @@ export function bgSetTimeout(
 }
 
 export function bgSetInterval(callback: () => void, duration: number) {
-  return bgSetTimeout(callback, duration, true);
+  uniqueId += 1;
+
+  callbacks[uniqueId] = {
+    callback,
+    duration,
+    interval: true,
+  };
+
+  ExpoBackgroundTimerModule.setInterval(uniqueId, duration);
+
+  return uniqueId;
 }
 
 export function bgClearTimeout(id: number) {
@@ -69,6 +85,8 @@ emitter.addListener(
     if (!callbacks[event.id]) return;
 
     callbacks[event.id].callback();
+
+    console.log("callbacks[event.id].interval", callbacks[event.id].interval);
 
     if (!callbacks[event.id].interval) {
       delete callbacks[event.id];
