@@ -1,6 +1,6 @@
 {
   "name": "expo-background-timer",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A background timer module for Expo that allows scheduling and managing timed tasks efficiently, even when the app is in the background.",
   "main": "build/index.js",
   "types": "build/index.d.ts",
