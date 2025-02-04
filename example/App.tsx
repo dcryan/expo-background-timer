@@ -2,14 +2,16 @@ import * as ExpoBackgroundTimer from "expo-background-timer";
 import { useState, useEffect } from "react";
 import { Button, StyleSheet, View } from "react-native";
 
+let timer = 0;
+
 export default function App() {
   useEffect(() => {
-    ExpoBackgroundTimer.startBackgroundTask();
-    console.log("App started background task");
+    ExpoBackgroundTimer.enableBackgroundExecution();
+    console.log("Start - enableBackgroundExecution");
 
     return () => {
-      ExpoBackgroundTimer.stopBackgroundTask();
-      console.log("App stopped background task");
+      ExpoBackgroundTimer.disableBackgroundExecution();
+      console.log("End - disableBackgroundExecution");
     };
   }, []);
 
@@ -26,7 +28,9 @@ export default function App() {
 
   const onSetInterval = async () => {
     console.log("App - onSetInterval");
-    const timerId = ExpoBackgroundTimer.bgSetInterval(() => {}, 3000);
+    const timerId = ExpoBackgroundTimer.bgSetInterval(() => {
+      console.log("App - onSetInterval - setInterval", timer++);
+    }, 1000);
 
     setIds([...ids, timerId]);
   };
